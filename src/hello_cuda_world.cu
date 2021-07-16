@@ -11,6 +11,8 @@
 
 #define LOOP 10
 
+#define BLOCK_SIZE 32
+
 #define MAT_SIZE_X 10000
 #define MAT_SIZE_Y 10000
 
@@ -35,8 +37,16 @@ void calculate_gpu(float *hMat_A, float *hMat_B, float *hMat_G, uint32_t mat_siz
     CHECK(cudaMalloc((float **) &dMat_B, nBytes));
     CHECK(cudaMalloc((float **) &dMat_G, nBytes));
 
-    printf("alloc");
+    CHECK(cudaMemcpy(dMat_A, hMat_A, nBytes, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dMat_B, hMat_B, nBytes, cudaMemcpyHostToDevice));
+
+    dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 grid((mat_size_x + block.x - 1) / block.x, (mat_size_y + block.y - 1) / block.y);
+    printf("Grid=(%d, %d), Block=(%d,%d)\n", grid.x, grid.y, block.x, block.y);
+	
     // TODO
+
+    CHECK(cudaMemcpy(hMat_G, dMat_G, nBytes, cudaMemcpyDeviceToHost));
 
     CHECK(cudaFree(dMat_A));
     CHECK(cudaFree(dMat_B));
