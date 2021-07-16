@@ -1,5 +1,10 @@
 #include <cinttypes>
 #include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #define MAT_SIZE_X 10000
 #define MAT_SIZE_Y 10000
@@ -16,6 +21,14 @@ int main(void) {
     hMat_A = (float *) malloc(nBytes);
     hMat_B = (float *) malloc(nBytes);
     hMat_G = (float *) malloc(nBytes);
+
+    // 乱数で行列Aと行列Bを初期化する
+    time_t t;
+    srand((unsigned int) time(&t));
+    for (uint32_t i = 0; i < mat_size_x * mat_size_y; i++) {
+        hMat_A[i] = (float)(rand() % 100000) / 10000.0f;
+	hMat_B[i] = (float)(rand() % 100000) / 10000.0f;
+    }
 
     // TODO
 
