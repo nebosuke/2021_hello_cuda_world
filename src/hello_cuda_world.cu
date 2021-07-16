@@ -27,6 +27,28 @@
   }                                   \
 }
 
+double cpu_second(void) {
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    return ((double) tp.tv_sec + (double) tp.tv_usec * 1.e-6);
+}
+
+__global__ void add_matrix_gpu(float *dMat_A, float *dMat_B, float *dMat_G, uint32_t mat_size_x, uint32_t mat_size_y) {
+    uint32_t mat_x = threadIdx.x + blockIdx.x * blockDim.x;
+    uint32_t mat_y = threadIdx.y + blockIdx.y * blockDim.y;
+
+    if (mat_x >= mat_size_x) {
+        return;
+    }
+    if (mat_y >= mat_size_y) {
+        return;
+    }
+
+    uint32_t index = mat_y * mat_size_x + mat_x;
+
+    dMat_G[index] = dMat_A[index] + dMat_B[index];
+}
+
 void calculate_gpu(float *hMat_A, float *hMat_B, float *hMat_G, uint32_t mat_size_x, uint32_t mat_size_y) {
     float *dMat_A = NULL;
     float *dMat_B = NULL;
@@ -43,8 +65,15 @@ void calculate_gpu(float *hMat_A, float *hMat_B, float *hMat_G, uint32_t mat_siz
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((mat_size_x + block.x - 1) / block.x, (mat_size_y + block.y - 1) / block.y);
     printf("Grid=(%d, %d), Block=(%d,%d)\n", grid.x, grid.y, block.x, block.y);
-	
-    // TODO
+
+    double start_sec = cpu_second();
+
+    for (int i = 0; i < LOOP; i++) {
+        add_matrix_gpu<<<grid, block>>> (dMat_A, dMat_B, dMat_G, mat_size_x, mat_size_y);
+    }
+
+    double elapsed_sec = (cpu_second() - start_sec);
+    printf("GPU: elapsed=%1f[sec]\n", elapsed_sec);
 
     CHECK(cudaMemcpy(hMat_G, dMat_G, nBytes, cudaMemcpyDeviceToHost));
 
@@ -65,9 +94,12 @@ void add_vector_cpu(float *hMat_A, float *hMat_B, float *hMat_G, uint32_t mat_si
 
 // CPUで A+B=G を実装
 void calculate_cpu(float *hMat_A, float *hMat_B, float *hMat_G, uint32_t mat_size_x, uint32_t mat_size_y) {
+    double start_sec = cpu_second();
     for (int i = 0; i < LOOP; i++) {
         add_vector_cpu(hMat_A, hMat_B, hMat_G, mat_size_x, mat_size_y);
     }
+    double elapsed_sec = (cpu_second() - start_sec);
+    printf("CPU: elapsed=%1f[sec]\n", elapsed_sec);
 }
 
 int main(void) {
@@ -91,7 +123,7 @@ int main(void) {
 	hMat_B[i] = (float)(rand() % 100000) / 10000.0f;
     }
 
-    // calculate_cpu(hMat_A, hMat_B, hMat_G, mat_size_x, mat_size_y);
+    calculate_cpu(hMat_A, hMat_B, hMat_G, mat_size_x, mat_size_y);
     calculate_gpu(hMat_A, hMat_B, hMat_G, mat_size_x, mat_size_y);
 
     free(hMat_A);
