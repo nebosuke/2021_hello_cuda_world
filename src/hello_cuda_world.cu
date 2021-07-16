@@ -6,10 +6,43 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
 #define LOOP 10
 
 #define MAT_SIZE_X 10000
 #define MAT_SIZE_Y 10000
+
+#define CHECK(func)                   \
+{                                     \
+  const cudaError_t error = func;     \
+  if (error != cudaSuccess) {         \
+    printf("Error: %s:%d\n", __FILE__, __LINE__); \
+    printf("Code: %d, Reason: %s\n", error, cudaGetErrorString(error)); \
+    cudaDeviceReset();                \
+    exit(EXIT_FAILURE);               \
+  }                                   \
+}
+
+void calculate_gpu(float *hMat_A, float *hMat_B, float *hMat_G, uint32_t mat_size_x, uint32_t mat_size_y) {
+    float *dMat_A = NULL;
+    float *dMat_B = NULL;
+    float *dMat_G = NULL;
+    int nBytes = sizeof(float) * mat_size_x * mat_size_y;
+
+    CHECK(cudaMalloc((float **) &dMat_A, nBytes));
+    CHECK(cudaMalloc((float **) &dMat_B, nBytes));
+    CHECK(cudaMalloc((float **) &dMat_G, nBytes));
+
+    printf("alloc");
+    // TODO
+
+    CHECK(cudaFree(dMat_A));
+    CHECK(cudaFree(dMat_B));
+    CHECK(cudaFree(dMat_G));
+    CHECK(cudaDeviceReset());
+}
 
 void add_vector_cpu(float *hMat_A, float *hMat_B, float *hMat_G, uint32_t mat_size_x, uint32_t mat_size_y) {
     for (uint32_t y = 0; y < mat_size_y; y++) {
@@ -48,8 +81,8 @@ int main(void) {
 	hMat_B[i] = (float)(rand() % 100000) / 10000.0f;
     }
 
-    calculate_cpu(hMat_A, hMat_B, hMat_G, mat_size_x, mat_size_y);
-    // TODO
+    // calculate_cpu(hMat_A, hMat_B, hMat_G, mat_size_x, mat_size_y);
+    calculate_gpu(hMat_A, hMat_B, hMat_G, mat_size_x, mat_size_y);
 
     free(hMat_A);
     free(hMat_B);
